@@ -21,7 +21,7 @@ RUN cd /usr/local && ln -s spark-${APACHE_SPARK_VERSION}-bin-hadoop2.6 spark
 # becomes available for Debian Jessie. We should switch
 # over to using that instead.
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
-    DISTRO=ubuntu && CODENAME=xenial && \
+    DISTRO=debian && CODENAME=wheezy && \
     echo "deb http://repos.mesosphere.com/${DISTRO} ${CODENAME} main" > /etc/apt/sources.list.d/mesosphere.list && \
     apt-get -y update && \
     apt-get --no-install-recommends -y --force-yes install mesos && \
@@ -35,4 +35,3 @@ ENV MESOS_NATIVE_LIBRARY /usr/local/lib/libmesos.so
 ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info
 
 USER $NB_USER
-WORKDIR $HOME

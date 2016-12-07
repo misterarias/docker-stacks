@@ -14,27 +14,31 @@ ENV R_LIBS_USER $SPARK_HOME/R/lib
 #    apt-get install -y --no-install-recommends \
 #    fonts-dejavu \ gfortran \ gcc  \ pcre2-utils \
 RUN apt-get update && apt install -y apt-transport-https
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9 && \
-    echo 'deb https://ftp.cixug.es/CRAN/bin/linux/ubuntu xenial/' >> /etc/apt/sources.list
-RUN apt-get update -y && \
-    apt-get install -y  r-base r-base-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
 
-# R packages
-# Pin r-base to a specific build number for https://github.com/jupyter/docker-stacks/issues/210#issuecomment-246081809
-#    'r-irkernel=0.7*' \
-RUN R -e 'install.packages(c("rjson", "tm", "wordcloud", "SnowballC", "ggplot2", "rcurl", "irkernel2"), repos=c("https://ftp.cixug.es/CRAN/"))'
-#RUN conda config --add channels r && \
-#    conda install  --yes --no-update-deps \
-#    'r-ggplot2=2.1*' \
-#    'r-tm' \
-#    'r-rcurl=1.95*' && conda clean -tipsy
+# This is for ubuntu:
+#RUN KEYSERVER=keyserver.ubuntu.com && KEY=E084DAB9 && DISTRO=ubuntu && CODENAME=xenial && \
+RUN KEYSERVER=keyserver.ubuntu.com && KEY=381BA480 && DISTRO=debian && CODENAME=jessie-cran3 && \
+    apt-key adv --keyserver ${KEYSERVER} --recv-keys ${KEY} && \
+    echo "deb https://ftp.cixug.es/CRAN/bin/linux/${DISTRO} ${CODENAME}/" >> /etc/apt/sources.list && \
+    apt-get update -y
+
+# No longer applies: Pin r-base to a specific build number for https://github.com/jupyter/docker-stacks/issues/210#issuecomment-246081809
+# FIX for libiconv.so.2 library link, needed for RCurl
+RUN apt-get install -y  r-base r-base-dev  \
+      libssl-dev libssh2-1-dev libcurl3-dev  \
+      libiconv-hook-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    ln -s /usr/lib/libiconv_hook.so  /usr/lib/libiconv.so.2
+
+RUN R -e 'install.packages(c("ggplot2", "RCurl", "devtools") , repos=c("https://ftp.cixug.es/CRAN/"))'
+RUN R -e 'devtools::install_github("IRkernel/IRkernel")'
 
 USER $NB_USER
-WORKDIR $HOME
 
+# R kernel for jupyter, installed in user's home (if installed as root, $HOME/.local becomes unwritable)
+RUN R -e 'IRkernel::installspec()'
 
 # Apache Toree kernel
-RUN pip --no-cache-dir install --upgrade pip toree==0.1.0.dev7
+RUN pip --no-cache-dir install toree
 RUN jupyter toree install --user

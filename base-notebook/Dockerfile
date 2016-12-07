@@ -2,14 +2,16 @@
 # Distributed under the terms of the Modified BSD License.
 
 # Debian Jessie image released 2016 May 03.
-FROM ubuntu:xenial
+FROM debian@sha256:32a225e412babcd54c0ea777846183c61003d125278882873fb2bc97f9057c51
 
 USER root
 
 # Install all OS dependencies for notebook server that starts but lacks all
 # features (e.g., download as all possible file formats)
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update && apt-get -yq dist-upgrade \
+RUN REPO=http://cdn-fastly.deb.debian.org \
+ && echo "deb $REPO/debian jessie main\ndeb $REPO/debian-security jessie/updates main" > /etc/apt/sources.list \
+ && apt-get update && apt-get -yq dist-upgrade \
  && apt-get install -yq --no-install-recommends \
     wget \
     bzip2 \
@@ -52,6 +54,7 @@ RUN mkdir /home/$NB_USER/work && \
     echo "cacert=/etc/ssl/certs/ca-certificates.crt" > /home/$NB_USER/.curlrc
 
 # Install conda as jovyan
+# Also, install conda-build, so conda can clean sources automatically
 ENV CONDA_VERSION 4.2.12
 ENV CONDA_BIN Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh
 ENV CONDA_CRC d0c7c71cc5659e54ab51f2005a8d96f3
@@ -61,7 +64,7 @@ RUN cd /tmp && \
     echo "${CONDA_CRC} *$CONDA_BIN" | md5sum -c - && \
     /bin/bash $CONDA_BIN -f -b -p $CONDA_DIR && \
     rm $CONDA_BIN && \
-    $CONDA_DIR/bin/conda install --quiet --yes conda==$CONDA_VERSION && \
+    $CONDA_DIR/bin/conda install --quiet --yes conda==$CONDA_VERSION conda-build && \
     $CONDA_DIR/bin/conda config --system --add channels conda-forge && \
     $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
     conda clean -tipsy
